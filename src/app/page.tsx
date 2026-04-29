@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowRight, ArrowLeft, ShieldCheck, AlertTriangle, ShieldAlert, CheckCircle2, XCircle, Sun, Moon, Laptop, Calendar } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ShieldCheck, AlertTriangle, ShieldAlert, CheckCircle2, XCircle, Sun, Moon, Laptop, Calendar, Download, FileText, Lock, Mail } from 'lucide-react';
 
 type ScanResult = {
   url: string;
@@ -34,6 +34,13 @@ export default function Home() {
   const [theme, setTheme] = useState<Theme>('system');
   const [mounted, setMounted] = useState(false);
   const [scanPhase, setScanPhase] = useState('');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Email Gate State
+  const [leadEmail, setLeadEmail] = useState('');
+  const [isResultsUnlocked, setIsResultsUnlocked] = useState(false);
+  const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   // Bot Protection State
   const [showBotChallenge, setShowBotChallenge] = useState(false);
@@ -122,6 +129,9 @@ export default function Home() {
       }
 
       setResult(data);
+      setIsResultsUnlocked(false);
+      setLeadEmail('');
+      setEmailError('');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -130,6 +140,33 @@ export default function Home() {
       clearTimeout(phaseTimer3);
       setScanPhase('');
       setIsLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!result) return;
+    setIsGeneratingPdf(true);
+    try {
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      });
+      if (!res.ok) throw new Error('Failed to generate PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const hostname = new URL(result.url).hostname;
+      a.download = `Security_Report_${hostname}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF download error:', err);
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -173,6 +210,35 @@ export default function Home() {
       'permissions-policy': 'Allows unauthorized access to sensitive browser features (camera, microphone, geolocation) by default.'
     };
     return explanations[headerName] || 'Missing critical security control.';
+  };
+
+  const handleUnlockResults = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(leadEmail.trim())) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+    setEmailError('');
+    setIsSubmittingEmail(true);
+    try {
+      // Send lead to Google Sheets (fire-and-forget, don't block user)
+      fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: leadEmail.trim(),
+          url: result?.url,
+          grade: result?.grade,
+          score: result?.score,
+          timestamp: result?.timestamp,
+        }),
+      }).catch(() => {}); // Silent fail — never block the user
+    } catch {}
+    // Small delay for perceived value
+    await new Promise(r => setTimeout(r, 800));
+    setIsResultsUnlocked(true);
+    setIsSubmittingEmail(false);
   };
 
   if (!mounted) return null; // Prevent hydration mismatch
@@ -329,8 +395,77 @@ export default function Home() {
           </div>
         )}
 
+        {/* Email Gate — appears after scan, before results are unlocked */}
+        {result && !isResultsUnlocked && (
+          <div className="mt-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="max-w-lg mx-auto bg-white dark:bg-[#111111] border border-slate-200 dark:border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden">
+              {/* Decorative gradient */}
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"></div>
+              <div className="absolute -top-20 -right-20 w-60 h-60 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 blur-3xl rounded-full"></div>
+              
+              <div className="relative text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-600/30 mb-6">
+                  <Lock className="w-7 h-7 text-white" />
+                </div>
+                
+                <h3 className="text-2xl sm:text-3xl font-bold mb-3 text-slate-900 dark:text-white">Analysis Complete</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base mb-2">
+                  We found <span className="font-bold text-red-500">{result.headers.filter(h => !h.present).length} security issues</span> and <span className="font-bold text-amber-500">{result.trackers.found} pre-consent tracker{result.trackers.found !== 1 ? 's' : ''}</span>.
+                </p>
+                <p className="text-slate-400 dark:text-slate-500 text-xs sm:text-sm mb-8">
+                  Enter your business email to unlock your full compliance report.
+                </p>
+                
+                <form onSubmit={handleUnlockResults} className="space-y-4">
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
+                    <input
+                      type="email"
+                      value={leadEmail}
+                      onChange={(e) => { setLeadEmail(e.target.value); setEmailError(''); }}
+                      placeholder="you@company.com"
+                      className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:ring-2 transition-all ${
+                        emailError ? 'border-red-400 dark:border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-white/10 focus:ring-blue-500'
+                      }`}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  {emailError && (
+                    <p className="text-xs text-red-500 font-medium text-left">{emailError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={isSubmittingEmail || !leadEmail}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingEmail ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Unlocking Report...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4" />
+                        Unlock Full Report
+                      </>
+                    )}
+                  </button>
+                </form>
+                
+                <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-600 mt-4">
+                  🔒 We never share your information. Used only for delivering your report.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Results Dashboard */}
-        {result && (
+        {result && isResultsUnlocked && (
           <div className="mt-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
             
             {/* Grade Header */}
@@ -366,6 +501,29 @@ export default function Home() {
                     Tested: {new Date(result.timestamp).toLocaleTimeString()}
                   </div>
                 </div>
+
+                {/* Download PDF Report Button */}
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={isGeneratingPdf}
+                  className="mt-4 inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-sm"
+                >
+                  {isGeneratingPdf ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-4 h-4" />
+                      Download PDF Report
+                      <Download className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
