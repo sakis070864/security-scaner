@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "google-auth-library": "^10.6.2",
     "google-spreadsheet": "^5.2.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.11.0",
