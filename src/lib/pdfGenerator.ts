@@ -366,7 +366,7 @@ export async function generateComplianceReport(scanData: ScanResultData): Promis
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(ev.color[0], ev.color[1], ev.color[2]);
-    doc.text(`● ${ev.date}`, 22, y);
+    doc.text(`> ${ev.date}`, 22, y);
     y += 4;
     // Description
     doc.setFont('helvetica', 'normal');
@@ -426,32 +426,51 @@ export async function generateComplianceReport(scanData: ScanResultData): Promis
   y += 6;
 
   // ═══════════════════════════════════════════════════════════════
-  //  CLOSING: YOUR BUSINESS IS EXPOSED
+  //  CLOSING: DYNAMIC BASED ON GRADE (matches on-screen text)
   // ═══════════════════════════════════════════════════════════════
   y = checkPage(doc, y, 45);
 
-  // Warning box
-  drawRoundedRect(doc, 15, y, pw - 30, 38, 3, COLORS.lightRed);
+  if (scanData.grade === 'A') {
+    // PROTECTED — green box (matches screen: "Your Business is Protected")
+    drawRoundedRect(doc, 15, y, pw - 30, 38, 3, COLORS.lightGreen);
 
-  // Title
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(COLORS.red[0], COLORS.red[1], COLORS.red[2]);
-  doc.text('Your Business is Exposed', pw / 2, y + 15, { align: 'center' });
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.green[0], COLORS.green[1], COLORS.green[2]);
+    doc.text('Your Business is Protected', pw / 2, y + 15, { align: 'center' });
 
-  // Description
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(COLORS.medGray[0], COLORS.medGray[1], COLORS.medGray[2]);
-  const exposedText = 'These failures violate global data protection laws like the GDPR, CCPA/CPRA, and FTC Guidelines — which carry fines up to 4-7% of global annual revenue with no cap. We implement enterprise-grade security wrappers with zero downtime.';
-  const exposedLines = doc.splitTextToSize(exposedText, pw - 44);
-  doc.text(exposedLines, 22, y + 20);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(COLORS.medGray[0], COLORS.medGray[1], COLORS.medGray[2]);
+    const protectedText = 'All critical security headers are properly configured. Your website meets the NY SHIELD Act and GDPR compliance benchmarks. We offer ongoing monitoring and advanced hardening services to keep you ahead of the 2026 regulatory landscape.';
+    const protectedLines = doc.splitTextToSize(protectedText, pw - 44);
+    doc.text(protectedLines, 22, y + 20);
 
-  // CTA
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(COLORS.blue[0], COLORS.blue[1], COLORS.blue[2]);
-  doc.text('Contact sakis@sakis-athan.com to schedule remediation', pw / 2, y + 33, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.green[0], COLORS.green[1], COLORS.green[2]);
+    doc.text('Explore Advanced Protection at sakis-athan.com', pw / 2, y + 33, { align: 'center' });
+  } else {
+    // EXPOSED — red box (matches screen: "Your Business is Exposed")
+    drawRoundedRect(doc, 15, y, pw - 30, 38, 3, COLORS.lightRed);
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.red[0], COLORS.red[1], COLORS.red[2]);
+    doc.text('Your Business is Exposed', pw / 2, y + 15, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(COLORS.medGray[0], COLORS.medGray[1], COLORS.medGray[2]);
+    const exposedText = 'These failures may violate the NY SHIELD Act ($250K cap for notification failures), the CCPA/CPRA, and the EU GDPR — which carry fines up to 4-7% of global annual revenue with no cap. We implement enterprise-grade security wrappers with zero downtime.';
+    const exposedLines = doc.splitTextToSize(exposedText, pw - 44);
+    doc.text(exposedLines, 22, y + 20);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.blue[0], COLORS.blue[1], COLORS.blue[2]);
+    doc.text('Contact sakis@sakis-athan.com to schedule remediation', pw / 2, y + 33, { align: 'center' });
+  }
 
   // ═══════════════════════════════════════════════════════════════
   //  FOOTER ON ALL PAGES
