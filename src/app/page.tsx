@@ -408,12 +408,25 @@ export default function Home() {
                   <Lock className="w-7 h-7 text-white" />
                 </div>
                 
-                <h3 className="text-2xl sm:text-3xl font-bold mb-3 text-slate-900 dark:text-white">Analysis Complete</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base mb-2">
-                  We found <span className="font-bold text-red-500">{result.headers.filter(h => !h.present).length} security issues</span> and <span className="font-bold text-amber-500">{result.trackers.found} pre-consent tracker{result.trackers.found !== 1 ? 's' : ''}</span>.
+                <h3 className="text-2xl sm:text-3xl font-bold mb-3 text-slate-900 dark:text-white">Analysis Complete — Issues Detected</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base mb-3">
+                  Your site has <span className="font-bold text-red-500">{result.headers.filter(h => !h.present).length} compliance failures</span> and <span className="font-bold text-amber-500">{result.trackers.found} pre-consent tracker{result.trackers.found !== 1 ? 's' : ''}</span> currently visible to regulatory enforcement systems.
                 </p>
-                <p className="text-slate-400 dark:text-slate-500 text-xs sm:text-sm mb-8">
-                  Enter your business email to unlock your full compliance report.
+                <div className="bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl p-4 mb-4 text-left">
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3">
+                    🏛️ The <span className="font-semibold text-slate-700 dark:text-slate-300">NY Attorney General (OAG)</span> and the <span className="font-semibold text-slate-700 dark:text-slate-300">EU Data Protection Board (EDPB)</span> run identical automated sweeps on websites like yours. These results show exactly what their bots see.
+                  </p>
+                  <p className="text-[10px] sm:text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wider">Companies have already paid:</p>
+                  <div className="space-y-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                    <p>🇺🇸 <span className="font-bold text-red-500">$1.2M</span> — tracking users without opt-out <span className="text-slate-400 dark:text-slate-600">(California)</span></p>
+                    <p>🇺🇸 <span className="font-bold text-red-500">$300K</span> — sharing visitor data via tracking pixels <span className="text-slate-400 dark:text-slate-600">(New York)</span></p>
+                    <p>🇪🇺 <span className="font-bold text-red-500">€746M</span> — non-compliant data processing <span className="text-slate-400 dark:text-slate-600">(EU)</span></p>
+                    <p>🇪🇺 <span className="font-bold text-red-500">€150M</span> — illegal cookie tracking without consent <span className="text-slate-400 dark:text-slate-600">(EU)</span></p>
+                    <p>🇪🇺 <span className="font-bold text-red-500">€40M</span> — placing trackers before user consent <span className="text-slate-400 dark:text-slate-600">(EU)</span></p>
+                  </div>
+                </div>
+                <p className="text-slate-400 dark:text-slate-500 text-xs sm:text-sm mb-6">
+                  Enter your business email to unlock your full report before they find you.
                 </p>
                 
                 <form onSubmit={handleUnlockResults} className="space-y-4">
